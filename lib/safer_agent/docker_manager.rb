@@ -71,7 +71,9 @@ module SaferAgent
 
     def ensure_volume_exists
       # Check if volume exists
-      volume_list = `docker volume ls --format '{{.Name}}'`.split("\n")
+      require "open3"
+      stdout, _stderr, status = Open3.capture3("docker", "volume", "ls", "--format", "{{.Name}}")
+      volume_list = stdout.split("\n")
       
       if !volume_list.include?(volume_name)
         puts "Creating named volume: #{volume_name}"
@@ -117,13 +119,9 @@ module SaferAgent
       
       puts "Running: #{docker_args.join(' ')}"
       
+      # exec() replaces the current process with the Docker container
+      # The process will end when the container stops (--rm removes it automatically)
       exec(*docker_args)
-    end
-
-    def cleanup
-      puts "Cleaning up container: #{container_name}"
-      system("docker", "stop", container_name, err: File::NULL)
-      system("docker", "rm", container_name, err: File::NULL)
     end
   end
 end

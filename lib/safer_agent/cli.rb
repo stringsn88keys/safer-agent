@@ -19,21 +19,12 @@ module SaferAgent
       
       docker_manager = DockerManager.new(working_dir: @options[:working_dir])
       
-      begin
-        docker_manager.run_container(
-          image: @options[:image],
-          command: @options[:command],
-          interactive: @options[:interactive]
-        )
-      rescue Interrupt
-        puts "\nInterrupted by user"
-        docker_manager.cleanup
-        exit(0)
-      rescue => e
-        puts "Error: #{e.message}"
-        docker_manager.cleanup
-        exit(1)
-      end
+      # Run the container - this replaces the current process
+      docker_manager.run_container(
+        image: @options[:image],
+        command: @options[:command],
+        interactive: @options[:interactive]
+      )
     end
 
     private
