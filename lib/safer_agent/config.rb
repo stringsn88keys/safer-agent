@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "fileutils"
 
 module SaferAgent
   class Config
@@ -29,7 +30,7 @@ module SaferAgent
     
     def load_config
       if File.exist?(CONFIG_FILE)
-        YAML.load_file(CONFIG_FILE) || {}
+        YAML.safe_load_file(CONFIG_FILE, permitted_classes: [Time]) || {}
       else
         {}
       end
@@ -71,13 +72,31 @@ module SaferAgent
       username = gets.chomp
       username = "safer" if username.empty?
       
+      # Validate username
+      unless username =~ /^[a-z_][a-z0-9_-]*$/
+        puts "Error: Invalid username. Must start with lowercase letter or underscore, contain only lowercase letters, numbers, underscores, and hyphens."
+        exit(1)
+      end
+      
       print "Enter user ID (default: 1000): "
-      uid = gets.chomp
-      uid = "1000" if uid.empty?
+      uid_input = gets.chomp
+      uid = uid_input.empty? ? "1000" : uid_input
+      
+      # Validate UID
+      unless uid =~ /^\d+$/ && uid.to_i >= 1000 && uid.to_i <= 60000
+        puts "Error: Invalid user ID. Must be a number between 1000 and 60000."
+        exit(1)
+      end
       
       print "Enter group ID (default: 1000): "
-      gid = gets.chomp
-      gid = "1000" if gid.empty?
+      gid_input = gets.chomp
+      gid = gid_input.empty? ? "1000" : gid_input
+      
+      # Validate GID
+      unless gid =~ /^\d+$/ && gid.to_i >= 1000 && gid.to_i <= 60000
+        puts "Error: Invalid group ID. Must be a number between 1000 and 60000."
+        exit(1)
+      end
       
       # Configure agents
       puts "\nSelect agents to install (space-separated numbers, or 'all', or 'none'):"

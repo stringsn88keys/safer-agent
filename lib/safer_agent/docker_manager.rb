@@ -112,11 +112,15 @@ module SaferAgent
         puts "  - Agents: #{config.selected_agents.empty? ? 'none' : config.selected_agents.join(', ')}"
         puts ""
         
-        # Build the image
-        success = system("docker", "build", "-t", CUSTOM_IMAGE_NAME, tmpdir)
+        # Build the image with output
+        require "open3"
+        stdout, stderr, status = Open3.capture3("docker", "build", "-t", CUSTOM_IMAGE_NAME, tmpdir)
         
-        unless success
-          raise "Failed to build custom Docker image"
+        unless status.success?
+          puts "\nDocker build failed!"
+          puts "STDOUT:", stdout unless stdout.empty?
+          puts "STDERR:", stderr unless stderr.empty?
+          raise "Failed to build custom Docker image. See output above for details."
         end
         
         puts "\n✓ Custom image built successfully: #{CUSTOM_IMAGE_NAME}\n"
