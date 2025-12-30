@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "lib/safer_agent/version"
+
 Gem::Specification.new do |spec|
   spec.name          = "safer-agent"
-  spec.version       = "0.1.0"
+  spec.version       = SaferAgent::VERSION
   spec.authors       = ["safer-agent"]
   spec.email         = ["info@example.com"]
 
