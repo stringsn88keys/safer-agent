@@ -5,10 +5,10 @@ module SaferAgent
     NODE_VERSION = "20.x"
     
     def self.generate(config)
-      # Validate inputs
-      username = validate_username(config.user_name)
-      uid = validate_id(config.user_id, "UID")
-      gid = validate_id(config.group_id, "GID")
+      # Validate inputs using Config's validation methods
+      username = Config.validate_username(config.user_name)
+      uid = Config.validate_id(config.user_id, "UID")
+      gid = Config.validate_id(config.group_id, "GID")
       agents = config.selected_agents
       
       dockerfile = <<~DOCKERFILE
@@ -73,22 +73,6 @@ module SaferAgent
       DOCKERFILE
       
       dockerfile
-    end
-    
-    private
-    
-    def self.validate_username(username)
-      unless username =~ /^[a-z_][a-z0-9_-]*$/
-        raise ArgumentError, "Invalid username: #{username}"
-      end
-      username
-    end
-    
-    def self.validate_id(id, name)
-      unless id.to_s =~ /^\d+$/ && id.to_i >= 1000 && id.to_i <= 60000
-        raise ArgumentError, "Invalid #{name}: #{id}"
-      end
-      id.to_s
     end
   end
 end

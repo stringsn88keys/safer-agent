@@ -30,7 +30,7 @@ module SaferAgent
     
     def load_config
       if File.exist?(CONFIG_FILE)
-        YAML.safe_load_file(CONFIG_FILE, permitted_classes: [Time]) || {}
+        YAML.safe_load_file(CONFIG_FILE) || {}
       else
         {}
       end
@@ -62,6 +62,20 @@ module SaferAgent
       config_data["group_id"] || "1000"
     end
     
+    def self.validate_username(username)
+      unless username =~ /^[a-z_][a-z0-9_-]*$/
+        raise ArgumentError, "Invalid username. Must start with lowercase letter or underscore, contain only lowercase letters, numbers, underscores, and hyphens."
+      end
+      username
+    end
+    
+    def self.validate_id(id, name)
+      unless id.to_s =~ /^\d+$/ && id.to_i >= 1000 && id.to_i <= 60000
+        raise ArgumentError, "Invalid #{name}. Must be a number between 1000 and 60000."
+      end
+      id.to_s
+    end
+    
     def interactive_setup
       puts "\n=== Safer Agent Configuration ==="
       puts "\nThis is your first time running safer-agent."
@@ -73,8 +87,10 @@ module SaferAgent
       username = "safer" if username.empty?
       
       # Validate username
-      unless username =~ /^[a-z_][a-z0-9_-]*$/
-        puts "Error: Invalid username. Must start with lowercase letter or underscore, contain only lowercase letters, numbers, underscores, and hyphens."
+      begin
+        username = self.class.validate_username(username)
+      rescue ArgumentError => e
+        puts "Error: #{e.message}"
         exit(1)
       end
       
@@ -83,8 +99,10 @@ module SaferAgent
       uid = uid_input.empty? ? "1000" : uid_input
       
       # Validate UID
-      unless uid =~ /^\d+$/ && uid.to_i >= 1000 && uid.to_i <= 60000
-        puts "Error: Invalid user ID. Must be a number between 1000 and 60000."
+      begin
+        uid = self.class.validate_id(uid, "user ID")
+      rescue ArgumentError => e
+        puts "Error: #{e.message}"
         exit(1)
       end
       
@@ -93,8 +111,10 @@ module SaferAgent
       gid = gid_input.empty? ? "1000" : gid_input
       
       # Validate GID
-      unless gid =~ /^\d+$/ && gid.to_i >= 1000 && gid.to_i <= 60000
-        puts "Error: Invalid group ID. Must be a number between 1000 and 60000."
+      begin
+        gid = self.class.validate_id(gid, "group ID")
+      rescue ArgumentError => e
+        puts "Error: #{e.message}"
         exit(1)
       end
       
