@@ -32,13 +32,15 @@ module SaferAgent
     ].freeze
 
     AGENT_VOLUME_MOUNT = "/root/.agent-settings"
+    CUSTOM_IMAGE_NAME = "safer-agent-custom"
 
-    attr_reader :working_dir, :container_name, :volume_name
+    attr_reader :working_dir, :container_name, :volume_name, :config
 
-    def initialize(working_dir: Dir.pwd)
+    def initialize(working_dir: Dir.pwd, config: nil)
       @working_dir = File.expand_path(working_dir)
       @container_name = "safer-agent-#{Time.now.to_i}-#{rand(1000)}"
       @volume_name = "safer-agent-settings"
+      @config = config || Config.new
     end
 
     def create_dockerignore
@@ -83,15 +85,86 @@ module SaferAgent
       end
     end
 
+    def custom_image_exists?
+      require "open3"
+      stdout, _stderr, _status = Open3.capture3("docker", "images", "-q", CUSTOM_IMAGE_NAME)
+      !stdout.strip.empty?
+    end
+
+    def build_custom_image
+      return if custom_image_exists?
+
+      puts "\n=== Building custom Docker image ==="
+      puts "This may take a few minutes on first run...\n"
+
+      # Generate Dockerfile
+      dockerfile_content = DockerfileGenerator.generate(config)
+      
+      # Create temporary directory for build context
+      require "tmpdir"
+      Dir.mktmpdir do |tmpdir|
+        dockerfile_path = File.join(tmpdir, "Dockerfile")
+        File.write(dockerfile_path, dockerfile_content)
+        
+        puts "Building image with:"
+        puts "  - User: #{config.user_name} (#{config.user_id}:#{config.group_id})"
+        puts "  - Node.js: installed"
+        puts "  - Agents: #{config.selected_agents.empty? ? 'none' : config.selected_agents.join(', ')}"
+        puts ""
+        
+        # Build the image
+        success = system("docker", "build", "-t", CUSTOM_IMAGE_NAME, tmpdir)
+        
+        unless success
+          raise "Failed to build custom Docker image"
+        end
+        
+        puts "\n✓ Custom image built successfully: #{CUSTOM_IMAGE_NAME}\n"
+      end
+    end
+
+    def determine_image(requested_image)
+      # If user specified a custom image, use it
+      return requested_image unless requested_image == "ubuntu:latest"
+      
+      # If configured, use custom image
+      if config.configured?
+        build_custom_image
+        CUSTOM_IMAGE_NAME
+      else
+        requested_image
+      end
+    end
+
+    def determine_user
+      # Return non-root user if configured
+      if config.configured?
+        "#{config.user_id}:#{config.group_id}"
+      else
+        nil
+      end
+    end
+
     def run_container(image: "ubuntu:latest", command: "/bin/bash", interactive: true)
       create_dockerignore
       ensure_volume_exists
+      
+      # Determine which image to use
+      actual_image = determine_image(image)
+      user = determine_user
       
       docker_args = ["docker", "run"]
       docker_args << "--rm"
       docker_args << "-it" if interactive
       docker_args << "--name"
       docker_args << container_name
+      
+      # Set user if configured
+      if user
+        docker_args << "--user"
+        docker_args << user
+      end
+      
       docker_args << "-v"
       docker_args << "#{working_dir}:/workspace"
       docker_args << "-w"
@@ -103,10 +176,15 @@ module SaferAgent
       if has_agent_dirs
         # Mount the named volume for persistent agent settings
         docker_args << "-v"
-        docker_args << "#{volume_name}:#{AGENT_VOLUME_MOUNT}"
+        if user
+          # Mount to the non-root user's home directory
+          docker_args << "#{volume_name}:/home/#{config.user_name}/.agent-settings"
+        else
+          docker_args << "#{volume_name}:#{AGENT_VOLUME_MOUNT}"
+        end
       end
       
-      docker_args << image
+      docker_args << actual_image
       
       # Split command if it's a complex command
       if command.include?(" ")

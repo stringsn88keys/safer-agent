@@ -23,6 +23,33 @@ Or add to your Gemfile:
 gem 'safer-agent'
 ```
 
+## First-Time Setup
+
+On first run, `safer-agent` will guide you through a configuration process:
+
+```bash
+safer-agent
+```
+
+You'll be asked to configure:
+- **Username**: The non-root user to run as in the container (default: safer)
+- **User ID**: The UID for the user (default: 1000)
+- **Group ID**: The GID for the user (default: 1000)
+- **Agents**: Which coding agents to pre-install (Claude, Copilot, Aider, or none)
+
+This creates a custom Docker image with:
+- Node.js installed for the non-root user
+- Selected coding agents pre-installed
+- Proper permissions for the non-root user
+
+You can reconfigure anytime by running:
+
+```bash
+safer-agent --setup
+```
+
+Or by deleting the config file at `~/.safer-agent/config.yml`
+
 ## Usage
 
 Basic usage - run an interactive shell in the current directory:
@@ -52,14 +79,38 @@ safer-agent --create-dockerignore
 ### Options
 
 - `-d, --dir DIRECTORY` - Working directory (default: current directory)
-- `-i, --image IMAGE` - Docker image to use (default: ubuntu:latest)
+- `-i, --image IMAGE` - Docker image to use (default: custom image if configured, otherwise ubuntu:latest)
 - `-c, --command COMMAND` - Command to run (default: /bin/bash)
 - `-n, --non-interactive` - Run in non-interactive mode
+- `--setup` - Run configuration setup (or reconfigure)
 - `--create-dockerignore` - Create .dockerignore and exit
 - `-h, --help` - Show help message
 - `-v, --version` - Show version
 
 ## Features
+
+### Non-Root User Execution
+
+Containers run as a non-root user for improved security. The user is created during the initial setup with:
+- Configurable username, UID, and GID
+- Sudo access within the container
+- Proper home directory and shell
+
+### Pre-installed Coding Agents
+
+Choose from popular coding agents to pre-install in your custom image:
+- **Claude Code** - Anthropic's Claude CLI
+- **GitHub Copilot CLI** - GitHub's Copilot command-line tool
+- **Aider** - AI pair programming in your terminal
+
+Agents are installed during the first-time setup and are immediately available in your containers.
+
+### Node.js Environment
+
+Node.js (version 20.x) is automatically installed in the custom image for the non-root user, with:
+- Global npm packages directory configured
+- PATH set up correctly
+- npm available for installing additional tools
 
 ### Automatic .dockerignore Generation
 

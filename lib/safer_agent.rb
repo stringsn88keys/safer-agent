@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "safer_agent/version"
+require_relative "safer_agent/config"
+require_relative "safer_agent/dockerfile_generator"
 require_relative "safer_agent/docker_manager"
 require_relative "safer_agent/cli"
 

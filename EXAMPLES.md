@@ -1,5 +1,18 @@
 # safer-agent Examples
 
+## Initial Setup
+
+### First-time configuration
+```bash
+safer-agent
+# Follow the prompts to configure user and select agents
+```
+
+### Reconfigure
+```bash
+safer-agent --setup
+```
+
 ## Basic Usage
 
 ### Run an interactive shell
@@ -73,9 +86,21 @@ The gem creates two types of mounts:
    - Contains all your project files
    - Changes persist on your host machine
 
-2. **Agent settings mount**: Named volume → `/root/.agent-settings` (persistent)
+2. **Agent settings mount**: Named volume → `~/.agent-settings` (persistent)
    - Stores agent configuration that persists across container runs
    - Created when any of these directories exist locally: `.claude`, `.cursor`, `.copilot`, `.aider`, `.continue`
+   - Mounted to the non-root user's home directory when using custom image
+
+## Custom Image
+
+After configuration, a custom Docker image is built with:
+- Ubuntu 22.04 base
+- Node.js 20.x
+- Your selected agents pre-installed
+- Non-root user with sudo access
+- All necessary tools and dependencies
+
+The image is named `safer-agent-custom` and is reused for subsequent runs.
 
 ## Tips
 
@@ -84,3 +109,5 @@ The gem creates two types of mounts:
 - Sensitive files are listed in `.dockerignore` for when you build images
 - Use `docker volume ls` to see the persistent volume
 - Use `docker volume rm safer-agent-settings` to remove the persistent volume if needed
+- Use `docker rmi safer-agent-custom` to remove the custom image and rebuild on next run
+- Configuration is stored in `~/.safer-agent/config.yml`

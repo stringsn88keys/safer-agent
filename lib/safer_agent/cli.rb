@@ -10,14 +10,22 @@ module SaferAgent
         working_dir: Dir.pwd,
         image: "ubuntu:latest",
         command: "/bin/bash",
-        interactive: true
+        interactive: true,
+        setup: false
       }
+      @config = Config.new
     end
 
     def run
       parse_options
       
-      docker_manager = DockerManager.new(working_dir: @options[:working_dir])
+      # Run setup if requested or if not configured
+      if @options[:setup] || !@config.configured?
+        @config.interactive_setup
+        @config = Config.new  # Reload config
+      end
+      
+      docker_manager = DockerManager.new(working_dir: @options[:working_dir], config: @config)
       
       # Run the container - this replaces the current process
       docker_manager.run_container(
@@ -54,8 +62,12 @@ module SaferAgent
           @options[:interactive] = false
         end
 
+        opts.on("--setup", "Run configuration setup") do
+          @options[:setup] = true
+        end
+
         opts.on("--create-dockerignore", "Create .dockerignore and exit") do
-          docker_manager = DockerManager.new(working_dir: @options[:working_dir])
+          docker_manager = DockerManager.new(working_dir: @options[:working_dir], config: @config)
           docker_manager.create_dockerignore
           exit(0)
         end
