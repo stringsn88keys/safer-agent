@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "shellwords"
-
 module SaferAgent
   class DockerfileGenerator
     NODE_VERSION = "20.x"

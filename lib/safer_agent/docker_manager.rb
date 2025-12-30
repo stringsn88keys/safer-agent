@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "tmpdir"
+require "open3"
 
 module SaferAgent
   class DockerManager
@@ -73,7 +74,6 @@ module SaferAgent
 
     def ensure_volume_exists
       # Check if volume exists
-      require "open3"
       stdout, _stderr, status = Open3.capture3("docker", "volume", "ls", "--format", "{{.Name}}")
       volume_list = stdout.split("\n")
       
@@ -86,7 +86,6 @@ module SaferAgent
     end
 
     def custom_image_exists?
-      require "open3"
       stdout, _stderr, _status = Open3.capture3("docker", "images", "-q", CUSTOM_IMAGE_NAME)
       !stdout.strip.empty?
     end
@@ -101,7 +100,6 @@ module SaferAgent
       dockerfile_content = DockerfileGenerator.generate(config)
       
       # Create temporary directory for build context
-      require "tmpdir"
       Dir.mktmpdir do |tmpdir|
         dockerfile_path = File.join(tmpdir, "Dockerfile")
         File.write(dockerfile_path, dockerfile_content)
@@ -113,7 +111,6 @@ module SaferAgent
         puts ""
         
         # Build the image with output
-        require "open3"
         stdout, stderr, status = Open3.capture3("docker", "build", "-t", CUSTOM_IMAGE_NAME, tmpdir)
         
         unless status.success?
