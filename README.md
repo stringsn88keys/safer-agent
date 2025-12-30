@@ -71,16 +71,18 @@ The gem automatically creates a `.dockerignore` file (if one doesn't exist) that
 - Build artifacts: `node_modules/`, `vendor/`, `*.log`
 - Git directory: `.git/`
 
+**Note:** The `.dockerignore` file is used when building Docker images from your workspace (with `docker build`). It does not affect which files are accessible in the running container when using `safer-agent`, as the tool uses volume mounts which include all files in the mounted directory. The `.dockerignore` helps ensure that if you later build Docker images from this workspace, sensitive files won't be included in the image layers.
+
 ### Named Volume for Agent Settings
 
-Agent configuration directories are preserved in a named Docker volume (`safer-agent-settings`):
+Agent configuration directories are preserved in a named Docker volume (`safer-agent-settings`) mounted at `/root/.agent-settings` in the container:
 - `.claude`
 - `.cursor`
 - `.copilot`
 - `.aider`
 - `.continue`
 
-This ensures your agent settings persist across container runs and aren't lost when containers are removed.
+This ensures your agent settings persist across container runs and aren't lost when containers are removed. The volume is automatically created on first use and reused for subsequent runs.
 
 ## Requirements
 

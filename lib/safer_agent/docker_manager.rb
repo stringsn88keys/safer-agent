@@ -31,6 +31,8 @@ module SaferAgent
       ".continue"
     ].freeze
 
+    AGENT_VOLUME_MOUNT = "/root/.agent-settings"
+
     attr_reader :working_dir, :container_name, :volume_name
 
     def initialize(working_dir: Dir.pwd)
@@ -69,11 +71,11 @@ module SaferAgent
 
     def ensure_volume_exists
       # Check if volume exists
-      result = `docker volume ls --format '{{.Name}}' | grep -x #{volume_name}`.strip
+      volume_list = `docker volume ls --format '{{.Name}}'`.split("\n")
       
-      if result.empty?
+      if !volume_list.include?(volume_name)
         puts "Creating named volume: #{volume_name}"
-        system("docker volume create #{volume_name}") || raise("Failed to create volume")
+        system("docker", "volume", "create", volume_name) || raise("Failed to create volume")
       else
         puts "Using existing volume: #{volume_name}"
       end
@@ -93,13 +95,13 @@ module SaferAgent
       docker_args << "-w"
       docker_args << "/workspace"
       
-      # Add named volume mounts for agent settings
-      AGENT_SETTINGS_DIRS.each do |dir|
-        local_path = File.join(working_dir, dir)
-        if File.directory?(local_path)
-          docker_args << "-v"
-          docker_args << "#{volume_name}:/root/agent-settings/#{dir}"
-        end
+      # Check if any agent settings directories exist in the working directory
+      has_agent_dirs = AGENT_SETTINGS_DIRS.any? { |dir| File.directory?(File.join(working_dir, dir)) }
+      
+      if has_agent_dirs
+        # Mount the named volume for persistent agent settings
+        docker_args << "-v"
+        docker_args << "#{volume_name}:#{AGENT_VOLUME_MOUNT}"
       end
       
       docker_args << image
@@ -120,8 +122,8 @@ module SaferAgent
 
     def cleanup
       puts "Cleaning up container: #{container_name}"
-      system("docker stop #{container_name} 2>/dev/null")
-      system("docker rm #{container_name} 2>/dev/null")
+      system("docker", "stop", container_name, err: File::NULL)
+      system("docker", "rm", container_name, err: File::NULL)
     end
   end
 end
